@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=multi_chest
-#SBATCH --output=../logs/multi_chest_debug.out
-#SBATCH --error=../logs/multi_chest_debug.err
+#SBATCH --output=../logs/multi_chest.out
+#SBATCH --error=../logs/multi_chest.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -20,6 +20,6 @@ nvidia-smi
 source /gpfs/scratch/zhangs18/Miniconda3/etc/profile.d/conda.sh
 conda activate image
 
-cd /gpfs/data/chopralab/$USER/CSRA
+cd /gpfs/data/chopralab/$USER/MLRIC
 
 python -m ${train_file} 
