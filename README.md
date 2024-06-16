@@ -2,7 +2,6 @@
 - Python 3.7
 - pytorch 1.6
 - torchvision 0.7.0
-- pycocotools 2.0
 - tqdm 4.49.0, pillow 7.2.0
 
 ## Dataset
