@@ -46,6 +46,19 @@ def evaluation(result, types, ann_path):
     classes = class_dict[types]
     ann_json = json.load(open(ann_path, "r"))
 
+    aps = np.zeros(len(classes), dtype=np.float64)
+    pred_json = result
+    # print(pred_json)
+    for i, _ in enumerate(tqdm(classes)):
+        ap = json_map(i, pred_json, ann_json, types)
+        aps[i] = ap
+    OP, OR, OF1, CP, CR, CF1 = json_metric(pred_json, ann_json, len(classes), types)
+    print("mAP: {:4f}".format(np.mean(aps)))
+    print("CP: {:4f}, CR: {:4f}, CF1 :{:4F}".format(CP, CR, CF1))
+    print("OP: {:4f}, OR: {:4f}, OF1 {:4F}".format(OP, OR, OF1))
+
+
+
     y_true = []
     y_pred = []
 
@@ -66,18 +79,3 @@ def evaluation(result, types, ann_path):
     # Generate the classification report
     report = classification_report(y_true, y_pred, target_names=classes)
     print(report)
-
-
-    aps = np.zeros(len(classes), dtype=np.float64)
-    pred_json = result
-    # print(pred_json)
-    for i, _ in enumerate(tqdm(classes)):
-        ap = json_map(i, pred_json, ann_json, types)
-        aps[i] = ap
-    OP, OR, OF1, CP, CR, CF1 = json_metric(pred_json, ann_json, len(classes), types)
-    print("mAP: {:4f}".format(np.mean(aps)))
-    print("CP: {:4f}, CR: {:4f}, CF1 :{:4F}".format(CP, CR, CF1))
-    print("OP: {:4f}, OR: {:4f}, OF1 {:4F}".format(OP, OR, OF1))
-
-
-

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=multi_chest
-#SBATCH --output=../logs/multi_chest_vit.out
-#SBATCH --error=../logs/multi_chest_vit.err
+#SBATCH --output=../logs/multi_chest_res.out
+#SBATCH --error=../logs/multi_chest_res.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
