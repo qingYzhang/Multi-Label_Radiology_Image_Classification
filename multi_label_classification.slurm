@@ -1,14 +1,14 @@
 #!/bin/bash
 
 #SBATCH --job-name=multi_chest
-#SBATCH --output=../logs/multi_chest.out
-#SBATCH --error=../logs/multi_chest.err
+#SBATCH --output=../logs/multi_chest_vit.out
+#SBATCH --error=../logs/multi_chest_vit.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=80GB
-#SBATCH --time=48:00:00
-#SBATCH --gres=gpu:a100
+#SBATCH --time=3-00:00:00
+#SBATCH --gres=gpu:a100:4
 
 # job info
 train_file=main

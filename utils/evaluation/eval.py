@@ -3,6 +3,8 @@ import torch
 import numpy as np
 import json
 from tqdm import tqdm
+from sklearn.metrics import classification_report
+
 from .cal_mAP import json_map
 from .cal_PR import json_metric, metric, json_metric_top3
 
@@ -42,11 +44,33 @@ class_dict = {
 def evaluation(result, types, ann_path):
     print("Evaluation")
     classes = class_dict[types]
-    aps = np.zeros(len(classes), dtype=np.float64)
-
     ann_json = json.load(open(ann_path, "r"))
-    pred_json = result
 
+    y_true = []
+    y_pred = []
+
+    # Convert annotations and predictions to lists of true and predicted labels
+    for ann, pred in zip(ann_json, result):
+        true_labels = ann['target']
+        true_labels = [0 if score == -1 else 1 for score in true_labels]
+        pred_scores = pred['scores']
+        pred_labels = [1 if score >= 0.5 else 0 for score in pred_scores]  # Assuming a threshold of 0.5
+        
+        y_true.append(true_labels)
+        y_pred.append(pred_labels)
+
+    # Flatten the lists for the classification report
+    # y_true_flat = [label for sublist in y_true for label in sublist if label != -1]
+    # y_pred_flat = [label for sublist in y_pred for label in sublist if label != -1]
+
+    # Generate the classification report
+    report = classification_report(y_true, y_pred, target_names=classes)
+    print(report)
+
+
+    aps = np.zeros(len(classes), dtype=np.float64)
+    pred_json = result
+    # print(pred_json)
     for i, _ in enumerate(tqdm(classes)):
         ap = json_map(i, pred_json, ann_json, types)
         aps[i] = ap

@@ -17,16 +17,16 @@ from tqdm import tqdm
 def Args():
     parser = argparse.ArgumentParser(description="settings")
     # model
-    parser.add_argument("--model", default="resnet101")
+    parser.add_argument("--model", default="vit_L16_224")
     parser.add_argument("--num_heads", default=1, type=int)
-    parser.add_argument("--lam",default=0.1, type=float)
+    parser.add_argument("--lam",default=0.3, type=float)
     parser.add_argument("--cutmix", default=None, type=str) # the path to load cutmix-pretrained backbone
     # dataset
     parser.add_argument("--dataset", default="chest", type=str)
     parser.add_argument("--num_cls", default=14, type=int)
     parser.add_argument("--train_aug", default=["randomflip", "resizedcrop"], type=list)
     parser.add_argument("--test_aug", default=[], type=list)
-    parser.add_argument("--img_size", default=448, type=int)
+    parser.add_argument("--img_size", default=224, type=int)
     parser.add_argument("--batch_size", default=16, type=int)
     # optimizer, default SGD
     parser.add_argument("--lr", default=0.01, type=float)
