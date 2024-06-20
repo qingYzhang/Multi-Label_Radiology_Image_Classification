@@ -21,13 +21,13 @@ def Args():
     parser.add_argument("--lam",default=0.3, type=float)
     # parser.add_argument("--cutmix", default="../logs/resnet101_cutmix_pretrained.pth", type=str) # the path to load cutmix-pretrained backbone
 
-    parser.add_argument("--load_from", default="../logs/checkpoint/vit_L16_224/chest_epoch_30.pth", type=str)
+    parser.add_argument("--load_from", default="../logs/checkpoint/vit_L16_224/chest_epoch_1.pth", type=str)
     # dataset
     parser.add_argument("--dataset", default="chest", type=str)
     parser.add_argument("--num_cls", default=14, type=int)
     parser.add_argument("--test_aug", default=[], type=list)
     parser.add_argument("--img_size", default=224, type=int)
-    parser.add_argument("--batch_size", default=16, type=int)
+    parser.add_argument("--batch_size", default=32, type=int)
 
     args = parser.parse_args()
     return args

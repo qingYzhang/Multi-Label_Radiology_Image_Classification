@@ -3,7 +3,11 @@ import torch
 import numpy as np
 import json
 from tqdm import tqdm
-from sklearn.metrics import classification_report
+
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
+
+from sklearn.metrics import roc_auc_score, classification_report
 
 from .cal_mAP import json_map
 from .cal_PR import json_metric, metric, json_metric_top3
@@ -61,6 +65,7 @@ def evaluation(result, types, ann_path):
 
     y_true = []
     y_pred = []
+    y_scores = []
 
     # Convert annotations and predictions to lists of true and predicted labels
     for ann, pred in zip(ann_json, result):
@@ -71,6 +76,8 @@ def evaluation(result, types, ann_path):
         
         y_true.append(true_labels)
         y_pred.append(pred_labels)
+        y_scores.append(pred_scores)
+
 
     # Flatten the lists for the classification report
     # y_true_flat = [label for sublist in y_true for label in sublist if label != -1]
@@ -79,3 +86,61 @@ def evaluation(result, types, ann_path):
     # Generate the classification report
     report = classification_report(y_true, y_pred, target_names=classes)
     print(report)
+
+    roc_auc_micro = roc_auc_score(y_true, y_scores, average='micro')
+    roc_auc_macro = roc_auc_score(y_true, y_scores, average='macro')
+    roc_auc_weighted = roc_auc_score(y_true, y_scores, average='weighted')
+    roc_auc_samples = roc_auc_score(y_true, y_scores, average='samples')
+    roc_auc_per_class = roc_auc_score(y_true, y_scores, average=None)
+
+    print(f"AUC Micro: {roc_auc_micro:.4f}")
+    print(f"AUC Macro: {roc_auc_macro:.4f}")
+    print(f"AUC Weighted: {roc_auc_weighted:.4f}")
+    print(f"AUC Samples: {roc_auc_samples:.4f}")
+    print("AUC Per Class:")
+    for class_name, auc_score in zip(classes, roc_auc_per_class):
+        print(f"{class_name}: {auc_score:.4f}")
+
+
+
+    # Choose some classes for which you want to plot ROC curves
+    classes_to_plot = ["Atelectasis","Consolidation","Infiltration"]
+
+    # Compute ROC curve and ROC area for each class
+    fpr = []
+    tpr = []
+    roc_auc = []
+    y_true = np.array(y_true)
+    y_scores = np.array(y_scores)
+    for i, class_name in enumerate(classes_to_plot):
+        class_fpr, class_tpr, _ = roc_curve(y_true[:, i], y_scores[:, i])
+        fpr.append(class_fpr)
+        tpr.append(class_tpr)
+        roc_auc.append(auc(class_fpr, class_tpr))
+
+    # Plot ROC curves
+    plt.figure(figsize=(10, 6))
+    for i, class_name in enumerate(classes_to_plot):
+        plt.plot(fpr[i], tpr[i], label=f'{class_name} (AUC = {roc_auc[i]:0.2f})')
+        plt.savefig("./{}.png".format(class_name), bbox_inches='tight', pad_inches=0)
+
+
+    plt.plot([0, 1], [0, 1], 'k--')  # Diagonal line
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curves for Selected Classes')
+    plt.legend(loc="lower right")
+    plt.show()
+
+
+    # Individual Examples
+    # Choose an example index to examine
+    example_idx = 0
+
+    # Print the true and predicted labels for this example
+    print("Example Index:", example_idx)
+    print("True Labels:", y_true[example_idx])
+    print("Predicted Labels:", y_pred[example_idx])
+    print("Predicted Scores:", y_scores[example_idx])

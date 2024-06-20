@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=80GB
 #SBATCH --time=3-00:00:00
-#SBATCH --gres=gpu:a100:4
+#SBATCH --gres=gpu:a100
 
 # job info
 train_file=main
