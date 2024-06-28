@@ -51,7 +51,7 @@ with open(csv_file_path, mode='r') as csv_file:
         if row['Image Index'] in train_list:
             data["train"].append({"target": target_vector, "img_path": img_path})
         elif row['Image Index'] in test_list:
-            test_target_vector = [-1] * len(possible_findings)
+            test_target_vector = [0] * len(possible_findings)
             for i, value in enumerate(target_vector):
                 if value == 1:
                     test_target_vector[i] = 1

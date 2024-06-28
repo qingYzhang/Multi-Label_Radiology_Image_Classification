@@ -70,7 +70,7 @@ def evaluation(result, types, ann_path):
     # Convert annotations and predictions to lists of true and predicted labels
     for ann, pred in zip(ann_json, result):
         true_labels = ann['target']
-        true_labels = [0 if score == -1 else 1 for score in true_labels]
+        # true_labels = [0 if score == -1 else 1 for score in true_labels]
         pred_scores = pred['scores']
         pred_labels = [1 if score >= 0.5 else 0 for score in pred_scores]  # Assuming a threshold of 0.5
         
