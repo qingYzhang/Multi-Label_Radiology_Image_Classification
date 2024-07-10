@@ -18,6 +18,7 @@ from pipeline.dataset import DataSet
 
 classes = ("Atelectasis","Consolidation","Infiltration","Pneumothorax","Edema","Emphysema","Fibrosis",
     "Effusion","Pneumonia","Pleural_thickening","Cardiomegaly","Nodule Mass","Hernia","No Finding")
+
 def Args():
     parser = argparse.ArgumentParser(description="settings")
     # model
@@ -34,34 +35,20 @@ def Args():
     parser.add_argument("--lr", default=1e-4, type=float)
     parser.add_argument("--weight_decay", default=1e-5, type=float, help="weight_decay")
     parser.add_argument("--total_epoch", default=30, type=int)
-    # parser.add_argument("--print_freq", default=100, type=int)
+    parser.add_argument("--print_freq", default=100, type=int)
     args = parser.parse_args()
     return args
     
+args = Args()
+
 #data
 if args.dataset == "chest":
     train_file = ["data/chest/train_data.json"]
     test_file = ['data/chest/test_data.json']
-# train_aug = ["randomflip", "resizedcrop"]
-# test_aug = []
-# img_size = 448
-# dataset = "chest"
-# batch_size = 32
 train_dataset = DataSet(train_file, args.train_aug, args.img_size, args.dataset)
 test_dataset = DataSet(test_file, args.test_aug, args.img_size, args.dataset)
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
 test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
-
-
-# train_dataset = DataSet(train_file, train_aug, img_size, dataset)
-# test_dataset = DataSet(test_file, test_aug, img_size, dataset)
-# trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-# testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
-
-# BATCH_SIZE = 32
-# lr = 1e-4
-# weight_decay = 1e-5
-# num_classes = 14
 
 
 # model
@@ -82,21 +69,18 @@ elif args.model == "AlexNet":
 # logits = torch.randn(BATCH_SIZE, num_classes)
 # targets = torch.randint(0, 2, (BATCH_SIZE, num_classes)).float()  # Example targets, shape: (batch_size, num_classes)
 # criterion = F.binary_cross_entropy_with_logits(logit, target, reduction="mean")
-if args.loss == "BCE":
-    criterion = F.binary_cross_entropy_with_logits(reduction="mean")
-elif args.loss == "FOCAL":
-    criterion = FocalLoss(reduction="mean")
-
+# if args.loss == "BCE":
+#     criterion = F.binary_cross_entropy_with_logits(reduction="mean")
+# elif args.loss == "FOCAL":
+#     criterion = FocalLoss(reduction="mean")
 optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
-
 
 
 # best_val_auc = 0
 # for epoch in range(args.total_epoch):
 #     model.train()
 #     epoch_begin = time.time()
-#     for idx, data in enumerate(trainloader):
+#     for idx, data in enumerate(train_loader):
 #         batch_begin = time.time() 
 #         train_data = data['img'].cuda()
 #         train_labels = data['target'].cuda()
@@ -124,14 +108,14 @@ optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 # training
 best_val_auc = 0
 for epoch in range(args.total_epoch):
-    for idx, data in enumerate(trainloader):
+    for idx, data in enumerate(train_loader):
         train_data = data['img'].cuda()
         train_labels = data['target'].cuda()
         y_pred = model(train_data)
         if args.loss == "BCE":
-            loss = criterion(y_pred, train_labels)
+            loss = F.binary_cross_entropy_with_logits(y_pred, train_labels, reduction='mean')
         elif args.loss == "FOCAL":
-            loss = criterion(y_pred, train_labels, reduction = "mean")
+            loss = FocalLoss(y_pred, train_labels, reduction='mean')
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -142,7 +126,7 @@ for epoch in range(args.total_epoch):
             with torch.no_grad():    
                 test_pred = []
                 test_true = [] 
-                for jdx, data in enumerate(testloader):
+                for jdx, data in enumerate(test_loader):
                     test_data = data['img'].cuda()
                     test_labels = data['target'].cuda()
                     y_pred = model(test_data)
@@ -153,8 +137,6 @@ for epoch in range(args.total_epoch):
                 test_pred = np.concatenate(test_pred)
                 val_auc_mean =  roc_auc_score(test_true, test_pred) 
 
-
-                print(test_true, test_pred)
                 roc_auc_micro = roc_auc_score(test_true, test_pred, average='micro')
                 roc_auc_macro = roc_auc_score(test_true, test_pred, average='macro')
                 roc_auc_weighted = roc_auc_score(test_true, test_pred, average='weighted')
@@ -167,7 +149,7 @@ for epoch in range(args.total_epoch):
                 print(f"AUC Samples: {roc_auc_samples:.4f}")
                 print("AUC Per Class:")
                 for class_name, auc_score in zip(classes, roc_auc_per_class):
-                print(f"{class_name}: {auc_score:.4f}")
+                    print(f"{class_name}: {auc_score:.4f}")
 
                 model.train()
 

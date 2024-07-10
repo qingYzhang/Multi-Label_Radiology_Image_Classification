@@ -23,12 +23,12 @@ class DataSet(Dataset):
                 transforms.Normalize(mean=[0, 0, 0], std=[1, 1, 1])
                 # transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
             ] 
-            # In this paper, we normalize the image data to [0, 1]
-            # You can also use the so called 'ImageNet' Normalization method
+            # We normalize the image data to [0, 1]
+            # Or 'ImageNet' Normalization method
         )
         self.anns = []
         self.load_anns()
-        print(self.augment)
+        # print(self.augment)
 
     def augs_function(self, augs, img_size):            
         t = []

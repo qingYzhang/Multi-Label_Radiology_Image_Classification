@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=multi_chest
-#SBATCH --output=../logs/multi_chest_res.out
-#SBATCH --error=../logs/multi_chest_res.err
+#SBATCH --output=../logs/res.out
+#SBATCH --error=../logs/res.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -11,7 +11,7 @@
 #SBATCH --gres=gpu:a100
 
 # job info
-train_file=main
+train_file=main_final
 
 # start running
 echo -e "GPUS = $CUDA_VISIBLE_DEVICES\n"
