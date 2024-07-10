@@ -1,12 +1,10 @@
 import json
-from torch.utils.data import Dataset
-from PIL import Image
-from torchvision.transforms import transforms
-import torch
 import numpy as np
+from PIL import Image
 
-# modify for transformation for vit
-# modfify wider crop-person images
+import torch
+from torch.utils.data import Dataset
+from torchvision.transforms import transforms
 
 
 class DataSet(Dataset):
@@ -23,6 +21,7 @@ class DataSet(Dataset):
             [
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0, 0, 0], std=[1, 1, 1])
+                # transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
             ] 
             # In this paper, we normalize the image data to [0, 1]
             # You can also use the so called 'ImageNet' Normalization method
@@ -30,16 +29,6 @@ class DataSet(Dataset):
         self.anns = []
         self.load_anns()
         print(self.augment)
-
-        # in wider dataset we use vit models
-        # so transformation has been changed
-        if self.dataset == "wider":
-            self.transform = transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-                ] 
-            )        
 
     def augs_function(self, augs, img_size):            
         t = []
