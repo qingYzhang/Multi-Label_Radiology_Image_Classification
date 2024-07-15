@@ -74,24 +74,33 @@ def train(i, args, model, train_loader, optimizer):
     print("Epoch {} training ends, total {:.2f}s".format(i, t))
 
 
-def val(i, args, model, test_loader, test_file):
+def val(i, args, model, test_loader):
     model.eval()
     print("Test on Epoch {}".format(i))
-    test_pred = []
-    test_true = [] 
-    for jdx, data in enumerate(test_loader):
-        test_data = data['img'].cuda()
-        test_labels = data['target'].cuda()
 
-        with torch.no_grad():    
+    with torch.no_grad():    
+        test_pred = []
+        test_true = [] 
+        for jdx, data in enumerate(test_loader):
+            # print(jdx)
+            test_data = data['img'].cuda()
+            test_labels = data['target'].cuda()
+
             y_pred = model(test_data)
+            test_pred.append(y_pred.cpu().detach().numpy())
+            test_true.append(test_labels.cpu().numpy())   
+        
+        print("test_data.......................123456789", len(test_pred), len(test_pred[0]), len(test_pred[0][0]))
 
-        test_pred.append(y_pred.cpu().detach().numpy())
-        test_true.append(test_labels.cpu().numpy())   
-    
+        # test_pred.append(y_pred.cpu().detach().numpy())
+        # test_true.append(test_labels.cpu().numpy())
+        print("test_data.......................123456789", len(test_pred), len(test_pred[0]), len(test_pred[0][0]))
+
         test_true = np.concatenate(test_true)
         test_pred = np.concatenate(test_pred)
         print(test_true,"\n.....................", test_pred)
+        print(test_true.shape, test_pred.shape) # (25596, 14) (25596, 14)
+
         val_auc_mean =  roc_auc_score(test_true, test_pred) 
 
         roc_auc_micro = roc_auc_score(test_true, test_pred, average='micro')
@@ -163,7 +172,7 @@ def main():
     for i in range(1, args.total_epoch + 1):
         train(i, args, model, train_loader, optimizer)
         # torch.save(model.state_dict(), "../logs/checkpoint/{}/chest_epoch_{}.pth".format(args.model, i))
-        val(i, args, model, test_loader, test_file)
+        val(i, args, model, test_loader)
         scheduler.step()
 
 

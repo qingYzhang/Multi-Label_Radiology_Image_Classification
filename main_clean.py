@@ -111,6 +111,7 @@ for epoch in range(args.total_epoch):
     for idx, data in enumerate(train_loader):
         train_data = data['img'].cuda()
         train_labels = data['target'].cuda()
+        # print("train_data.......................123456789", train_data.shape, train_labels.shape)
         y_pred = model(train_data)
         if args.loss == "BCE":
             loss = F.binary_cross_entropy_with_logits(y_pred, train_labels, reduction='mean')
@@ -126,15 +127,19 @@ for epoch in range(args.total_epoch):
             with torch.no_grad():    
                 test_pred = []
                 test_true = [] 
-                for jdx, data in enumerate(test_loader):
+                for jdx, data in enumerate(test_loader): # change the "data"
                     test_data = data['img'].cuda()
                     test_labels = data['target'].cuda()
-                    y_pred = model(test_data)
-                    test_pred.append(y_pred.cpu().detach().numpy())
-                    test_true.append(test_labels.cpu().numpy())   
-            
+                    # print("test_data.......................123456789", test_data.shape, test_labels.shape)
+
+                    y_pred = model(test_data) # (1,14)
+                    test_pred.append(y_pred.cpu().detach().numpy()) # (32,14)
+                    test_true.append(test_labels.cpu().numpy()) # (32,14)
+                print("test_data.......................123456789", len(test_pred), len(test_pred[0][0]))
                 test_true = np.concatenate(test_true)
                 test_pred = np.concatenate(test_pred)
+                print(test_true,"\n.....................", test_pred) 
+                print(test_true.shape, test_pred.shape) # (25596, 14) (25596, 14)
                 val_auc_mean =  roc_auc_score(test_true, test_pred) 
 
                 roc_auc_micro = roc_auc_score(test_true, test_pred, average='micro')
