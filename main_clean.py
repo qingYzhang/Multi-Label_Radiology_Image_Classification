@@ -160,7 +160,7 @@ for epoch in range(args.total_epoch):
 
                 if best_val_auc < val_auc_mean:
                     best_val_auc = val_auc_mean
-                    torch.save(model.state_dict(), 'ce_pretrained_model.pth')
+                    torch.save(model.state_dict(), '../logs/ce_pretrained_model.pth')
 
                 print ('Epoch=%s, BatchID=%s, Val_AUC=%.4f, Best_Val_AUC=%.4f'%(epoch, idx, val_auc_mean, best_val_auc ))
     # t = time.time() - epoch_begin

@@ -15,6 +15,7 @@ from PIL import Image
 from sklearn.metrics import roc_auc_score, classification_report
 
 from pipeline.dataset import DataSet
+from pipeline.resnet_csra import ResNet_CSRA
 
 
 # classes = ("Atelectasis","Consolidation","Infiltration","Pneumothorax","Edema","Emphysema","Fibrosis",
@@ -23,7 +24,7 @@ from pipeline.dataset import DataSet
 def Args():
     parser = argparse.ArgumentParser(description="settings")
     # model
-    parser.add_argument("--model", default="DenseNet121")  # ResNet101, DenseNet121, AlexNet
+    parser.add_argument("--model", default="CSRA")  # ResNet101, DenseNet121, AlexNet
     # dataset
     parser.add_argument("--dataset", default="chest", type=str)
     parser.add_argument("--num_classes", default=14, type=int)
@@ -44,8 +45,9 @@ def Args():
 
 
 def train(i, args, model, train_loader, optimizer):
-    print()
     model.train()
+    print("Train on Epoch {}".format(i))
+
     epoch_begin = time.time()
     for idx, data in enumerate(train_loader):
         batch_begin = time.time() 
@@ -90,16 +92,16 @@ def val(i, args, model, test_loader):
             test_pred.append(y_pred.cpu().detach().numpy())
             test_true.append(test_labels.cpu().numpy())   
         
-        print("test_data.......................123456789", len(test_pred), len(test_pred[0]), len(test_pred[0][0]))
+        # print("test_data.......................123456789", len(test_pred), len(test_pred[0]), len(test_pred[0][0]))
 
         # test_pred.append(y_pred.cpu().detach().numpy())
         # test_true.append(test_labels.cpu().numpy())
-        print("test_data.......................123456789", len(test_pred), len(test_pred[0]), len(test_pred[0][0]))
+        # print("test_data.......................123456789", len(test_pred), len(test_pred[0]), len(test_pred[0][0]))
 
         test_true = np.concatenate(test_true)
         test_pred = np.concatenate(test_pred)
-        print(test_true,"\n.....................", test_pred)
-        print(test_true.shape, test_pred.shape) # (25596, 14) (25596, 14)
+        # print(test_true,"\n.....................", test_pred)
+        # print(test_true.shape, test_pred.shape) # (25596, 14) (25596, 14)
 
         val_auc_mean =  roc_auc_score(test_true, test_pred) 
 
@@ -118,7 +120,8 @@ def val(i, args, model, test_loader):
             print(f"{class_name}: {auc_score:.4f}")
         
         torch.save(model.state_dict(), f'../logs/epoch{i}_auc_{val_auc_mean:.2f}.pth')
-        print ('Epoch=%s, Val_AUC=%.4f'%(i, val_auc_mean))
+
+        print ("Epoch {} testing ends, val_AUC = {:.4f}".format(i, val_auc_mean))
 
 
 def main():
@@ -144,6 +147,9 @@ def main():
     elif args.model == "AlexNet":
         model = models.alexnet(pretrained=True)
         model.classifier[6] = torch.nn.Linear(4096, args.num_classes)
+    elif args.model == "CSRA":
+        print("using csra resnet101")
+        model = ResNet_CSRA(num_heads=8, lam=0.1, num_classes=args.num_classes, cutmix="../logs/resnet101_cutmix_pretrained.pth")
     model.cuda()
     if torch.cuda.device_count() > 1:
         print("lets use {} GPUs.".format(torch.cuda.device_count()))

@@ -105,7 +105,9 @@ def main():
 
     # model
     if args.model == "resnet101": 
-        model = ResNet_CSRA(num_heads=args.num_heads, lam=args.lam, num_classes=args.num_cls, cutmix=args.cutmix)
+        model = DenseNet_CSRA(num_heads=args.num_heads, lam=args.lam, num_classes=args.num_cls)
+
+        # model = ResNet_CSRA(num_heads=args.num_heads, lam=args.lam, num_classes=args.num_cls, cutmix=args.cutmix)
     if args.model == "vit_B16_224":
         model = VIT_B16_224_CSRA(cls_num_heads=args.num_heads, lam=args.lam, cls_num_cls=args.num_cls)
     if args.model == "vit_L16_224":

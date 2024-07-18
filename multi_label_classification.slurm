@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=multi_chest
-#SBATCH --output=../logs/res.out
-#SBATCH --error=../logs/res.err
+#SBATCH --output=../logs/res_csra.out
+#SBATCH --error=../logs/res_csra.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -12,6 +12,8 @@
 
 # job info
 train_file=main_final
+model="CSRA" # ResNet101, DenseNet121, AlexNet
+
 
 # start running
 echo -e "GPUS = $CUDA_VISIBLE_DEVICES\n"
@@ -22,4 +24,4 @@ conda activate image
 
 cd /gpfs/data/chopralab/$USER/MLRIC
 
-python -m ${train_file} 
+python -m ${train_file} --model ${model}
