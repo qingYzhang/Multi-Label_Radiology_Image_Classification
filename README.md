@@ -1,8 +1,9 @@
 ## Requirements
-- Python 3.7
-- pytorch 1.6
-- torchvision 0.7.0
-- tqdm 4.49.0, pillow 7.2.0
+- Python
+- pytorch
+- torchvision
+- tqdm, pillow
+- scikit-learn
 
 ## Dataset
 We expect Chest dataset to have the following structure:
