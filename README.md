@@ -2,7 +2,7 @@
 - Python
 - pytorch
 - torchvision
-- tqdm, pillow
+- pillow
 - scikit-learn
 
 ## Dataset
@@ -25,7 +25,7 @@ which will automatically result in annotation json files in *./data/chest*
 ## Demo
 We provide prediction demos of our models. The demo images can be picked from test dataset, you can simply run demo.py by using pretrained models:
 ```shell
-python demo.py --model resnet101 --num_heads 1 --lam 0.1 --dataset chest --load_from PRETRAINED_MODEL.pth --img_dir utils/demo_images
+python demo.py --model resnet101 --load_from PRETRAINED_MODEL.pth --img_dir utils/demo_images
 ```
 which will output like this:
 ```shell
@@ -35,19 +35,13 @@ utils/demo_images/000004.jpg prediction: Fibrosis,
 ```
 
 ## Validation
-We provide pretrained models on [Google Drive](https://www.google.com/drive/) for validation. ResNet101 trained on ImageNet with **CutMix** augmentation can be downloaded 
-[here](https://drive.google.com/file/d/1seXPipXSgH_Fzk18vaVmclrXOIeocmfZ/view?usp=sharing).
-
-For chest, run the following validation example:
+Run the following validation example:
 ```shell
-python val.py --num_heads 1 --lam 0.1 --dataset chest --num_cls 14  --load_from MODEL.pth
+python val.py --load_from MODEL.pth
 ```
 
 ## Training
-#### Chest
-You can run either of these two lines below 
+Run the line below 
 ```shell
-python main.py --num_heads 1 --lam 0.1 --dataset chest --num_cls 14
-python main.py --num_heads 1 --lam 0.1 --dataset chest --num_cls 14 --cutmix CutMix_ResNet101.pth
+python main_final.py --model ${model}
 ```
-Note that the first command uses the Official ResNet-101 backbone while the second command uses the ResNet-101 pretrained on ImageNet with CutMix augmentation.
