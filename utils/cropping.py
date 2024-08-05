@@ -1,9 +1,12 @@
+import os
 import scipy
-import imageio
 import argparse
 
+import cv2 as cv
 import numpy as np
 import pandas as pd
+import imageio.v2 as imageio
+import matplotlib.pyplot as plt
 
 
 def get_masks_and_sizes_of_connected_components(img_mask):
@@ -21,16 +24,30 @@ def get_masks_and_sizes_of_connected_components(img_mask):
 
     return mask, mask_pixels_dict
 
-
-def get_mask_of_largest_connected_component(img_mask):
+def get_mask_of_largest_connected_component(img_mask, component_rank=1):
     """
-    Finds the largest connected component from the mask of the image
+    Finds the largest connected component from the mask of the image.
+    
+    Parameters:
+    img_mask (ndarray): The input image mask.
+    component_rank (int): The rank of the component to find (1 for largest, 2 for second largest, etc.).
+    
+    Returns:
+    ndarray: A mask with the largest connected component.
     """
     mask, mask_pixels_dict = get_masks_and_sizes_of_connected_components(img_mask)
-    print(pd.Series(mask_pixels_dict))
-    largest_mask_index = pd.Series(mask_pixels_dict).idxmax()
-    largest_mask = mask == largest_mask_index
-    return largest_mask
+    mask_pixels_series = pd.Series(mask_pixels_dict)
+    
+    # Get the index of the specified largest component
+    sorted_indices = mask_pixels_series.sort_values(ascending=False).index
+    print(sorted_indices)
+    if component_rank - 1 < len(sorted_indices):
+        selected_mask_index = sorted_indices[component_rank - 1]
+    else:
+        raise ValueError("component_rank is out of bounds for the number of connected components")
+    
+    selected_mask = mask == selected_mask_index
+    return selected_mask
 
 
 def get_edge_values(img, largest_mask, axis):
@@ -60,7 +77,7 @@ def mark_connected_component(image, start_point):
         if visited[x, y] or not image[x, y]:
             continue
         visited[x, y] = True
-        component[x, y] = 255  # Mark the component in the new image
+        component[x, y] = 1  # Mark the component in the new image
         
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
@@ -70,7 +87,70 @@ def mark_connected_component(image, start_point):
     return component
 
 
-def crop_img(img_path, target_path, threshold, iterations):
+def include_buffer_y_axis(img, y_edge_top, y_edge_bottom, buffer_size):
+    """
+    Includes buffer in all sides of the image in y-direction
+    """
+    if y_edge_top > 0:
+        y_edge_top -= min(y_edge_top, buffer_size)
+    if y_edge_bottom < img.shape[0]:
+        y_edge_bottom += min(img.shape[0] - y_edge_bottom, buffer_size)
+    return y_edge_top, y_edge_bottom
+
+
+def include_buffer_x_axis(img, x_edge_left, x_edge_right, buffer_size):
+    """
+    Includes buffer in only one side of the image in x-direction
+    """
+    if x_edge_left > 0:
+        x_edge_left -= min(x_edge_left, buffer_size)
+    if x_edge_right < img.shape[1]:
+        x_edge_right += min(img.shape[1] - x_edge_right, buffer_size)
+    return x_edge_left, x_edge_right
+
+def create_mask_and_crop(img, x_edge_left, x_edge_right, y_edge_top, y_edge_bottom):
+    """
+    Creates a mask the same size as the specified area and crops the original image to the specified area
+    """
+    mask_height = y_edge_bottom - y_edge_top
+    mask_width = x_edge_right - x_edge_left
+    mask = np.ones((mask_height, mask_width), dtype=img.dtype)
+    
+    cropped_img = img[y_edge_top:y_edge_bottom, x_edge_left:x_edge_right]
+    
+    return mask, cropped_img
+
+def calculate_mask_percentage(mask):
+    """
+    calculate the masked pixel percentage in a mask
+    """
+    # Count the number of pixels in the mask with value 1
+    mask_pixels = np.sum(mask == 1)
+    
+    # Calculate the total number of pixels in the image
+    total_pixels = mask.size
+    
+    # Compute the percentage of mask coverage
+    mask_percentage = (mask_pixels / total_pixels) * 100
+    return mask_percentage
+
+def msk_to_img(img, th_mask, buffer_size):
+    # Get the rectangle of the component
+    y_edge_top, y_edge_bottom = get_edge_values(img, th_mask, "y")
+    x_edge_left, x_edge_right = get_edge_values(img, th_mask, "x")
+
+    # include the buffer size
+    x_edge_left, x_edge_right = include_buffer_x_axis(img, x_edge_left, x_edge_right, buffer_size)
+    y_edge_top, y_edge_bottom = include_buffer_y_axis(img, y_edge_top, y_edge_bottom, buffer_size)
+
+    # Get the cropped img and mask
+    mask, cropped_img = create_mask_and_crop(img, x_edge_left, x_edge_right, y_edge_top, y_edge_bottom)
+
+    # Apply the mask to the cropped image
+    result = cropped_img * mask
+    return result, x_edge_left, x_edge_right, y_edge_top, y_edge_bottom   
+
+def crop_img(img_path, target_path, iterations, buffer_size):
     """
     Performs erosion on the mask of the image, selects largest connected component,
     dialates the largest connected component
@@ -85,51 +165,83 @@ def crop_img(img_path, target_path, threshold, iterations):
         
     """
     img = np.array(imageio.imread(img_path))
-    print(img)
 
-    img_mask = img > threshold
-    img_mask_clean = img_mask
+    # Otsu's thresholding after Gaussian filtering
+    blur = cv.GaussianBlur(img, (5, 5), 0)
+    _, th_mask = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
 
-    # Erosion in order to remove thin lines in the background
-    img_mask = scipy.ndimage.morphology.binary_erosion(img_mask, iterations=iterations)
+    imageio.imwrite('./1.png', th_mask, format='png')
 
-    # Select mask for largest connected component
-    largest_mask = get_mask_of_largest_connected_component(img_mask)
 
-    # Dilation to recover the original mask, excluding the thin lines
-    largest_mask = scipy.ndimage.morphology.binary_dilation(largest_mask, iterations=iterations)
+    #TODO
+    th_mask_clean = th_mask
+    # Get the largest connected componenet in the mask
+    th_mask_1 = get_mask_of_largest_connected_component(th_mask, component_rank=1)
+    th_mask_2 = get_mask_of_largest_connected_component(th_mask, component_rank=2)
 
-    # figure out where to crop
-    y_edge_top, y_edge_bottom = get_edge_values(img, largest_mask, "y")
-    x_edge_left, x_edge_right = get_edge_values(img, largest_mask, "x")
+    # Get masked pixel percentage
+    th_mask_1_percentage = calculate_mask_percentage(th_mask_1)
+    th_mask_2_percentage = calculate_mask_percentage(th_mask_2)
 
-    # figure out the center of cropping and mark the connected componenet in the orginal mask
-    x, y = (x_edge_left+x_edge_right)//2,(y_edge_top+y_edge_bottom)//2
-    component = mark_connected_component(img_mask_clean, [x,y])
+    print(th_mask_1_percentage, th_mask_2_percentage)
+    print(th_mask_1_percentage/th_mask_2_percentage)
+    if 0.4 < th_mask_1_percentage/th_mask_2_percentage < 2.5:
+        print("two knee mode")
+        result1, _, _, _, _ = msk_to_img(img, th_mask_1, buffer_size)
+        result2, _, _, _, _ = msk_to_img(img, th_mask_2, buffer_size)
+        mode = 2
+    else:
+        result1, _, _, _, _ = msk_to_img(img, th_mask_1, buffer_size)
+        mode = 1
+        
+    if mode == 2:
+        base, ext = os.path.splitext(target_path)
+        target_path_2 = f"{base}_2{ext}"
+        imageio.imwrite(target_path, result1, format='png')
+        imageio.imwrite(target_path_2, result2, format='png')
+    else:
+        imageio.imwrite(target_path, result1, format='png')
 
-    # Generate the output png
-    result = np.zeros_like(img)
-    result[component == 255] = img[component == 255]
-    imageio.imwrite(target_path, result, format='png')
-    # return (y_edge_top, y_edge_bottom, x_edge_left, x_edge_right)
+
+    # img_mask = img > threshold
+    # img_mask_clean = img_mask 
+
+    # # Select mask for largest connected component
+    # largest_mask = get_mask_of_largest_connected_component(img_mask, component_rank=1)
+
+    # # figure out where to crop
+    # y_edge_top, y_edge_bottom = get_edge_values(img, largest_mask, "y")
+    # x_edge_left, x_edge_right = get_edge_values(img, largest_mask, "x")
+
+    # # figure out the center of cropping and mark the connected componenet in the orginal mask
+    # x, y = (x_edge_left+x_edge_right)//2,(y_edge_top+y_edge_bottom)//2
+    # component = mark_connected_component(img_mask_clean, [x,y])
+
+    # # Generate the output png
+    # result = np.zeros_like(img)
+    # result[component == 1] = img[component == 1]
+    # imageio.imwrite(target_path, result, format='png')
+    # # return (y_edge_top, y_edge_bottom, x_edge_left, x_edge_right)
     return
 
 
 def main():
     parser = argparse.ArgumentParser(description='Remove background of image and save cropped files')
-    parser.add_argument('--img_path', default='./IM00567.png')
+    parser.add_argument('--img_path', default='./IM00504.png')
     parser.add_argument('--target_path', default='./cropped_image/test.png')
     # parser.add_argument('--data_path', default='./new/new.pkl')
-    parser.add_argument('--threshold', default=71, type=int)
-    parser.add_argument('--num-iterations', default=100, type=int)
+    # parser.add_argument('--threshold', default=90, type=int)
+    parser.add_argument('--num-iterations', default=30, type=int)
+    parser.add_argument('--buffer_size', default=30, type=int)
     args = parser.parse_args()
 
     crop_img(
         img_path=args.img_path,
         target_path=args.target_path,
         # data_path=args.data_path,
-        threshold=args.threshold,
-        iterations=args.num_iterations
+        # threshold=args.threshold,
+        iterations=args.num_iterations,
+        buffer_size=args.buffer_size
     )
 
 
