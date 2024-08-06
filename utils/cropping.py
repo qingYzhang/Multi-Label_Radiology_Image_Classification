@@ -8,6 +8,7 @@ import pandas as pd
 import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 
+from glob import glob
 
 def get_masks_and_sizes_of_connected_components(img_mask):
     """
@@ -40,7 +41,7 @@ def get_mask_of_largest_connected_component(img_mask, component_rank=1):
     
     # Get the index of the specified largest component
     sorted_indices = mask_pixels_series.sort_values(ascending=False).index
-    print(sorted_indices)
+    # print(sorted_indices)
     if component_rank - 1 < len(sorted_indices):
         selected_mask_index = sorted_indices[component_rank - 1]
     else:
@@ -170,30 +171,35 @@ def crop_img(img_path, target_path, iterations, buffer_size):
     blur = cv.GaussianBlur(img, (5, 5), 0)
     _, th_mask = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
 
-    imageio.imwrite('./1.png', th_mask, format='png')
-
-
-    #TODO
-    th_mask_clean = th_mask
     # Get the largest connected componenet in the mask
     th_mask_1 = get_mask_of_largest_connected_component(th_mask, component_rank=1)
-    th_mask_2 = get_mask_of_largest_connected_component(th_mask, component_rank=2)
+    try: 
+        th_mask_2 = get_mask_of_largest_connected_component(th_mask, component_rank=2)
+    except:
+        mode = 1
+    else:
+        mode = 2
+    # th_mask_3 = get_mask_of_largest_connected_component(th_mask, component_rank=3)
+    # th_mask_4 = get_mask_of_largest_connected_component(th_mask, component_rank=4)
+
 
     # Get masked pixel percentage
     th_mask_1_percentage = calculate_mask_percentage(th_mask_1)
-    th_mask_2_percentage = calculate_mask_percentage(th_mask_2)
+    if mode == 2:
+        th_mask_2_percentage = calculate_mask_percentage(th_mask_2)
+    # th_mask_3_percentage = calculate_mask_percentage(th_mask_3)
+    # th_mask_4_percentage = calculate_mask_percentage(th_mask_4)
 
-    print(th_mask_1_percentage, th_mask_2_percentage)
-    print(th_mask_1_percentage/th_mask_2_percentage)
-    if 0.4 < th_mask_1_percentage/th_mask_2_percentage < 2.5:
-        print("two knee mode")
-        result1, _, _, _, _ = msk_to_img(img, th_mask_1, buffer_size)
-        result2, _, _, _, _ = msk_to_img(img, th_mask_2, buffer_size)
-        mode = 2
+    # print(th_mask_1_percentage, th_mask_2_percentage)
+    # print(th_mask_1_percentage/th_mask_2_percentage)
+    result1, _, _, _, _ = msk_to_img(img, th_mask_1, buffer_size)
+
+    if mode == 2 and 0.4 < th_mask_1_percentage/th_mask_2_percentage < 2.5:
+            # print("two knee mode")
+            result2, _, _, _, _ = msk_to_img(img, th_mask_2, buffer_size)
     else:
-        result1, _, _, _, _ = msk_to_img(img, th_mask_1, buffer_size)
         mode = 1
-        
+    
     if mode == 2:
         base, ext = os.path.splitext(target_path)
         target_path_2 = f"{base}_2{ext}"
@@ -235,14 +241,38 @@ def main():
     parser.add_argument('--buffer_size', default=30, type=int)
     args = parser.parse_args()
 
-    crop_img(
-        img_path=args.img_path,
-        target_path=args.target_path,
-        # data_path=args.data_path,
-        # threshold=args.threshold,
-        iterations=args.num_iterations,
-        buffer_size=args.buffer_size
-    )
+
+
+    if os.path.isfile(args.img_path):  # Single image path
+        img_paths = [args.img_path]
+    elif os.path.isdir(args.img_path):  # Directory containing images
+        img_paths = glob(os.path.join(args.img_path, '*.png'))  # Adjust file extension as needed
+        print(img_paths)
+    else:
+        raise ValueError(f"Invalid path: {args.img_path}")
+
+    os.makedirs(args.target_path, exist_ok=True)
+
+    for img_path in img_paths:
+        img_name = os.path.basename(img_path)
+        target_file = os.path.join(args.target_path, img_name)
+        crop_img(
+            img_path=img_path,
+            target_path=target_file,
+            # data_path=args.data_path,
+            # threshold=args.threshold,
+            iterations=args.num_iterations,
+            buffer_size=args.buffer_size
+        )
+
+        # crop_img(
+        #     img_path=args.img_path,
+        #     target_path=args.target_path,
+        #     # data_path=args.data_path,
+        #     # threshold=args.threshold,
+        #     iterations=args.num_iterations,
+        #     buffer_size=args.buffer_size
+        # )
 
 
 if __name__ == "__main__":
