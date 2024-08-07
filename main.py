@@ -1,11 +1,11 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+
 import torchvision.models as models
 import torchvision.transforms as transforms
-import torchvision.ops.focal_loss as FocalLoss
+from torchvision.ops import sigmoid_focal_loss as FocalLoss
 
 import time
 import argparse
@@ -23,15 +23,17 @@ def Args():
     # dataset
     parser.add_argument("--dataset", default="chest", type=str)
     parser.add_argument("--num_classes", default=14, type=int)
-    parser.add_argument("--train_aug", default=["randomflip", "resizedcrop"], type=list)   # ["randomflip", "ColorJitter", "resizedcrop", "RandAugment"]
+    parser.add_argument("--train_aug", default=[], type=list)   # ["randomflip", "ColorJitter", "resizedcrop", "RandAugment"]
     parser.add_argument("--test_aug", default=[], type=list)
     parser.add_argument("--img_size", default=448, type=int)
     parser.add_argument("--batch_size", default=32, type=int)
     # parser.add_argument("--classes", default=("Atelectasis","Consolidation","Infiltration","Pneumothorax","Edema","Emphysema","Fibrosis",
     # "Effusion","Pneumonia","Pleural_thickening","Cardiomegaly","Nodule Mass","Hernia","No Finding"), type=tuple)
     # optimizer, default ADM
-    parser.add_argument("--loss", default="BCE") #BCE, FOCAL
+    parser.add_argument("--optimizer", default="Adam") #Adam, SGD
+    parser.add_argument("--loss", default="FOCAL") #BCE, FOCAL
     parser.add_argument("--lr", default=1e-4, type=float)
+    parser.add_argument("--momentum", default=0.9, type=float)
     parser.add_argument("--weight_decay", default=1e-5, type=float, help="weight_decay")
     parser.add_argument("--total_epoch", default=30, type=int)
     parser.add_argument("--print_freq", default=100, type=int)
@@ -119,8 +121,13 @@ def main():
         test_file = ['data/chest/test_data.json']
         step_size = 4
     train_dataset = DataSet(train_file, args.train_aug, args.img_size, args.dataset)
+    class_weights = train_dataset.class_weights
+    # print(class_weights)
+    sample_weights = np.array([class_weights[np.argmax(ann["target"])] for ann in train_dataset.anns])
+    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8, sampler=sampler)
+
     test_dataset = DataSet(test_file, args.test_aug, args.img_size, args.dataset)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
 
     # model
@@ -149,14 +156,26 @@ def main():
         else:
             backbone.append(param)
 
-    optimizer = optim.Adam(
+    if args.optimizer == "Adam":
+        optimizer = optim.Adam(
+            [
+                {'params': backbone, 'lr': args.lr},
+                {'params': classifier, 'lr': args.lr * 10}
+            ],
+            lr=args.lr,
+            weight_decay=args.weight_decay
+        )
+    elif args.optimizer == "SGD":
+        optimizer = optim.SGD(
         [
             {'params': backbone, 'lr': args.lr},
             {'params': classifier, 'lr': args.lr * 10}
         ],
         lr=args.lr,
+        momentum=args.momentum,  # Add momentum if needed
         weight_decay=args.weight_decay
-    )
+        )
+
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.1)
 
     # training and validation

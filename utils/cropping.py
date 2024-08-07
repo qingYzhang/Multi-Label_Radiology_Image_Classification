@@ -15,13 +15,16 @@ def get_masks_and_sizes_of_connected_components(img_mask):
     Finds the connected components from the mask of the image
     """
     mask, num_labels = scipy.ndimage.label(img_mask)
-
+    # print(mask, num_labels)
     mask_pixels_dict = {}
     for i in range(num_labels + 1):
         this_mask = (mask == i)
-        if img_mask[this_mask][0] != 0:
-            # Exclude the 0-valued mask
-            mask_pixels_dict[i] = np.sum(this_mask)
+        print(img_mask[this_mask])
+        # if len(img_mask[this_mask])==0
+        if len(img_mask[this_mask]) != 0:
+            if img_mask[this_mask][0] != 0:
+                # Exclude the 0-valued mask
+                mask_pixels_dict[i] = np.sum(this_mask)
 
     return mask, mask_pixels_dict
 
@@ -141,8 +144,8 @@ def msk_to_img(img, th_mask, buffer_size):
     x_edge_left, x_edge_right = get_edge_values(img, th_mask, "x")
 
     # include the buffer size
-    x_edge_left, x_edge_right = include_buffer_x_axis(img, x_edge_left, x_edge_right, buffer_size)
-    y_edge_top, y_edge_bottom = include_buffer_y_axis(img, y_edge_top, y_edge_bottom, buffer_size)
+    # x_edge_left, x_edge_right = include_buffer_x_axis(img, x_edge_left, x_edge_right, buffer_size)
+    # y_edge_top, y_edge_bottom = include_buffer_y_axis(img, y_edge_top, y_edge_bottom, buffer_size)
 
     # Get the cropped img and mask
     mask, cropped_img = create_mask_and_crop(img, x_edge_left, x_edge_right, y_edge_top, y_edge_bottom)
@@ -151,7 +154,7 @@ def msk_to_img(img, th_mask, buffer_size):
     result = cropped_img * mask
     return result, x_edge_left, x_edge_right, y_edge_top, y_edge_bottom   
 
-def crop_img(img_path, target_path, iterations, buffer_size):
+def crop_img(img_path, target_path, iterations, gap, buffer_size):
     """
     Performs erosion on the mask of the image, selects largest connected component,
     dialates the largest connected component
@@ -170,6 +173,20 @@ def crop_img(img_path, target_path, iterations, buffer_size):
     # Otsu's thresholding after Gaussian filtering
     blur = cv.GaussianBlur(img, (5, 5), 0)
     _, th_mask = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+    
+    output_path = 'binary_mask_org.png'
+    imageio.imwrite(output_path, th_mask, format= "png")
+
+
+    th_mask = scipy.ndimage.morphology.binary_erosion(th_mask, iterations=iterations)
+
+    output_path = 'binary_mask_1.png'
+    imageio.imwrite(output_path, th_mask.astype(np.uint8) * 255, format= "png")
+    th_mask = scipy.ndimage.morphology.binary_dilation(th_mask, iterations=iterations+gap)
+
+    output_path = 'binary_mask.png'
+    imageio.imwrite(output_path, th_mask.astype(np.uint8) * 255, format= "png")
+
 
     # Get the largest connected componenet in the mask
     th_mask_1 = get_mask_of_largest_connected_component(th_mask, component_rank=1)
@@ -233,11 +250,12 @@ def crop_img(img_path, target_path, iterations, buffer_size):
 
 def main():
     parser = argparse.ArgumentParser(description='Remove background of image and save cropped files')
-    parser.add_argument('--img_path', default='./IM00504.png')
-    parser.add_argument('--target_path', default='./cropped_image/test.png')
+    parser.add_argument('--img_path', default='./IM00013.png')
+    parser.add_argument('--target_path', default='./cropped_image')
     # parser.add_argument('--data_path', default='./new/new.pkl')
     # parser.add_argument('--threshold', default=90, type=int)
-    parser.add_argument('--num-iterations', default=30, type=int)
+    parser.add_argument('--num-iterations', default=5, type=int)
+    parser.add_argument('--gap', default=10, type=int)
     parser.add_argument('--buffer_size', default=30, type=int)
     args = parser.parse_args()
 
@@ -262,6 +280,7 @@ def main():
             # data_path=args.data_path,
             # threshold=args.threshold,
             iterations=args.num_iterations,
+            gap=args.gap,
             buffer_size=args.buffer_size
         )
 

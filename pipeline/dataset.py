@@ -28,6 +28,7 @@ class DataSet(Dataset):
         )
         self.anns = []
         self.load_anns()
+        self.class_weights = self.compute_class_weights()
         # print(self.augment)
 
     def augs_function(self, augs, img_size):            
@@ -51,6 +52,15 @@ class DataSet(Dataset):
             json_data = json.load(open(ann_file, "r"))
             self.anns += json_data
 
+    def compute_class_weights(self):
+        targets = [ann["target"] for ann in self.anns]
+        num_classes = len(targets[0])
+        class_counts = np.zeros(num_classes)
+        for target in targets:
+            class_counts += np.array(target)
+        class_weights = 1.0 / class_counts
+        return class_weights
+
     def __len__(self):
         return len(self.anns)
 
@@ -58,25 +68,13 @@ class DataSet(Dataset):
         idx = idx % len(self)
         ann = self.anns[idx]
         img = Image.open(ann["img_path"]).convert("RGB")
-
-        if self.dataset == "wider":
-            x, y, w, h = ann['bbox']
-            img_area = img.crop([x, y, x+w, y+h])
-            img_area = self.augment(img_area)
-            img_area = self.transform(img_area)
-            message = {
-                "img_path": ann['img_path'],
-                "target": torch.Tensor(ann['target']),
-                "img": img_area
-            }
-        else: # voc and coco
-            img = self.augment(img)
-            img = self.transform(img)
-            message = {
-                "img_path": ann["img_path"],
-                "target": torch.Tensor(ann["target"]),
-                "img": img
-            }
+        img = self.augment(img)
+        img = self.transform(img)
+        message = {
+            "img_path": ann["img_path"],
+            "target": torch.Tensor(ann["target"]),
+            "img": img
+        }
 
         return message
         # finally, if we use dataloader to get the data, we will get
