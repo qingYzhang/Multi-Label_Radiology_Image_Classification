@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=multi_chest
-#SBATCH --output=../logs/res_alex.out
-#SBATCH --error=../logs/res_alex.err
+#SBATCH --job-name=oai
+#SBATCH --output=../logs/oai.out
+#SBATCH --error=../logs/oai.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -12,10 +12,15 @@
 
 # job info
 train_file=main
-model="AlexNet" # ResNet101, DenseNet121, AlexNet
+model="ResNet101" # ResNet101, DenseNet121, AlexNet
+dataset="oai" # chest, oai
+num_classes=5 # 14 for chest, 5 for oai
+
+optimizer="Adam" # Adam, SGD
 batch_size=32
-loss="BCE" #BCE, FOCAL
+loss="FOCAL" #BCE, FOCAL
 learning_rate=1e-4
+momentum=0.9 # Specifically for SGD
 weight_decay=1e-5
 total_epoch=30
 
@@ -28,5 +33,6 @@ conda activate image
 
 cd /gpfs/data/chopralab/$USER/MLRIC
 
-python -m ${train_file} --model ${model} --batch_size ${batch_size} --loss ${loss} \
-        --lr ${learning_rate} --weight_decay ${weight_decay} --total_epoch ${total_epoch}
+python -m ${train_file} --model ${model} --dataset ${dataset} --num_classes ${num_classes} \
+        --optimizer ${optimizer} --batch_size ${batch_size} --loss ${loss} --lr ${learning_rate} \
+        --momentum ${momentum} --weight_decay ${weight_decay} --total_epoch ${total_epoch}

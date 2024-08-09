@@ -4,6 +4,7 @@
 - torchvision
 - pillow
 - scikit-learn
+- numpy
 
 ## Dataset
 We expect Chest dataset to have the following structure:
@@ -19,6 +20,7 @@ Dataset/
 ## Generate json file (for implementation) of these datasets.
 ```shell
 python utils/prepare/preprocess.py  -data_path Dataset/Chest
+python utils/prepare/preprocess_oai.py -data_path Dataset/OAI
 ```
 which will automatically result in annotation json files in *./data/chest*
 
@@ -43,5 +45,5 @@ python val.py --load_from MODEL.pth
 ## Training
 Run the line below 
 ```shell
-python main_final.py --model ${model}
+python main.py --model ${model}
 ```

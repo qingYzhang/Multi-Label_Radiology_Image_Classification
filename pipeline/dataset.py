@@ -4,7 +4,7 @@ from PIL import Image
 
 import torch
 from torch.utils.data import Dataset
-from torchvision.transforms import transforms
+from torchvision.transforms import v2 as transforms
 
 
 class DataSet(Dataset):
@@ -35,13 +35,11 @@ class DataSet(Dataset):
         t = []
         if 'randomflip' in augs:
             t.append(transforms.RandomHorizontalFlip())
-        if 'ColorJitter' in augs:
-            t.append(transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0))
-        if 'resizedcrop' in augs:
-            t.append(transforms.RandomResizedCrop(img_size, scale=(0.7, 1.0)))
-        if 'RandAugment' in augs:
-            t.append(RandAugment())
-
+        if 'randomrotate' in augs:
+            t.append(transforms.RandomRotation(degrees=(0, 180)))
+        if 'randomperspective' in augs:
+            t.append(transforms.RandomPerspective())
+    
         t.append(transforms.Resize((img_size, img_size)))
 
         return transforms.Compose(t)

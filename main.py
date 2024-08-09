@@ -1,16 +1,15 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 import torchvision.models as models
-import torchvision.transforms as transforms
 from torchvision.ops import sigmoid_focal_loss as FocalLoss
 
 import time
 import argparse
 import numpy as np
-from PIL import Image
+# from PIL import Image
 from sklearn.metrics import roc_auc_score, classification_report
 
 from pipeline.dataset import DataSet
@@ -21,19 +20,19 @@ def Args():
     # model
     parser.add_argument("--model", default="ResNet101")  # ResNet101, DenseNet121, AlexNet
     # dataset
-    parser.add_argument("--dataset", default="chest", type=str)
-    parser.add_argument("--num_classes", default=14, type=int)
-    parser.add_argument("--train_aug", default=[], type=list)   # ["randomflip", "ColorJitter", "resizedcrop", "RandAugment"]
+    parser.add_argument("--dataset", default="oai", type=str) # chest, oai
+    parser.add_argument("--num_classes", default=5, type=int) # 14 for chest, 5 for oai
+    parser.add_argument("--train_aug", default=[], type=list)   # ['randomflip', 'randomrotate', 'randomperspective']
     parser.add_argument("--test_aug", default=[], type=list)
     parser.add_argument("--img_size", default=448, type=int)
     parser.add_argument("--batch_size", default=32, type=int)
     # parser.add_argument("--classes", default=("Atelectasis","Consolidation","Infiltration","Pneumothorax","Edema","Emphysema","Fibrosis",
     # "Effusion","Pneumonia","Pleural_thickening","Cardiomegaly","Nodule Mass","Hernia","No Finding"), type=tuple)
     # optimizer, default ADM
-    parser.add_argument("--optimizer", default="Adam") #Adam, SGD
-    parser.add_argument("--loss", default="FOCAL") #BCE, FOCAL
+    parser.add_argument("--optimizer", default="Adam") # Adam, SGD
+    parser.add_argument("--loss", default="FOCAL") # BCE, FOCAL
     parser.add_argument("--lr", default=1e-4, type=float)
-    parser.add_argument("--momentum", default=0.9, type=float)
+    parser.add_argument("--momentum", default=0.9, type=float) # Specifically for SGD
     parser.add_argument("--weight_decay", default=1e-5, type=float, help="weight_decay")
     parser.add_argument("--total_epoch", default=30, type=int)
     parser.add_argument("--print_freq", default=100, type=int)
@@ -119,6 +118,10 @@ def main():
     if args.dataset == "chest":
         train_file = ["data/chest/train_data.json"]
         test_file = ['data/chest/test_data.json']
+        step_size = 4
+    elif args.dataset == "oai":
+        train_file = ["data/oai/train_val_dataset.json"]
+        test_file = ['data/oai/test_dataset.json']
         step_size = 4
     train_dataset = DataSet(train_file, args.train_aug, args.img_size, args.dataset)
     class_weights = train_dataset.class_weights
