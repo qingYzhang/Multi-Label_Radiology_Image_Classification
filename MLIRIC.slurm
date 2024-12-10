@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=oai
-#SBATCH --output=../logs/oai.out
-#SBATCH --error=../logs/oai.err
+#SBATCH --output=../capstone/our.out
+#SBATCH --error=../capstone/our.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -12,9 +12,9 @@
 
 # job info
 train_file=main
-model="ResNet101" # ResNet101, DenseNet121, AlexNet
-dataset="oai" # chest, oai
-num_classes=5 # 14 for chest, 5 for oai
+model="DenseNet121" # ResNet101, DenseNet121, AlexNet, TResNet, ViT
+dataset="ourdata" # chest, oai
+num_classes=15 # 14 for chest, 5 for oai
 
 optimizer="Adam" # Adam, SGD
 batch_size=32

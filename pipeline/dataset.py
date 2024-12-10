@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 
 import torch
+import pydicom
 from torch.utils.data import Dataset
 from torchvision.transforms import v2 as transforms
 
@@ -65,7 +66,19 @@ class DataSet(Dataset):
     def __getitem__(self, idx):
         idx = idx % len(self)
         ann = self.anns[idx]
-        img = Image.open(ann["img_path"]).convert("RGB")
+
+
+        # make sure to change this when you use dcm
+        dicom = pydicom.dcmread(ann["img_path"])
+        
+        # study_description = dataset.get((0x0008, 0x1030), 'Unknown View')
+        img_data = dicom.pixel_array
+        img = Image.fromarray(img_data)
+        img = img.convert("RGB")
+
+
+        # this is for png
+        # img = Image.open(ann["img_path"]).convert("RGB")
         img = self.augment(img)
         img = self.transform(img)
         message = {

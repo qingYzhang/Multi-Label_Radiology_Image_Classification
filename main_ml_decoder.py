@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, WeightedRandomSampler
@@ -6,23 +7,24 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 import torchvision.models as models
 from torchvision.ops import sigmoid_focal_loss as FocalLoss
 
-import time
 import timm
+import time
 import argparse
 import numpy as np
 # from PIL import Image
+from ml_decoder import add_ml_decoder_head
 from sklearn.metrics import roc_auc_score, classification_report
-
+from transformers import AutoImageProcessor, CvtForImageClassification
 from pipeline.dataset import DataSet
-
 
 def Args():
     parser = argparse.ArgumentParser(description="settings")
     # model
-    parser.add_argument("--model", default="ViT")  # ResNet101, DenseNet121, AlexNet, TResNet, ViT
+    parser.add_argument("--model", default="TResNet")  # ResNet101, DenseNet121, AlexNet
+    parser.add_argument("--using_ml_decoder", default=1, type=int)
     # dataset
-    parser.add_argument("--dataset", default="ourdata", type=str) # chest, oai
-    parser.add_argument("--num_classes", default=15, type=int) # 14 for chest, 5 for oai
+    parser.add_argument("--dataset", default="oai", type=str) # chest, oai
+    parser.add_argument("--num_classes", default=5, type=int) # 14 for chest, 5 for oai
     parser.add_argument("--train_aug", default=[], type=list)   # ['randomflip', 'randomrotate', 'randomperspective']
     parser.add_argument("--test_aug", default=[], type=list)
     parser.add_argument("--img_size", default=224, type=int)
@@ -31,7 +33,7 @@ def Args():
     # "Effusion","Pneumonia","Pleural_thickening","Cardiomegaly","Nodule Mass","Hernia","No Finding"), type=tuple)
     # optimizer, default ADM
     parser.add_argument("--optimizer", default="Adam") # Adam, SGD
-    parser.add_argument("--loss", default="FOCAL") # BCE, FOCAL
+    parser.add_argument("--loss", default="BCE") # BCE, FOCAL
     parser.add_argument("--lr", default=1e-4, type=float)
     parser.add_argument("--momentum", default=0.9, type=float) # Specifically for SGD
     parser.add_argument("--weight_decay", default=1e-5, type=float, help="weight_decay")
@@ -51,11 +53,15 @@ def train(i, args, model, train_loader, optimizer):
         batch_begin = time.time() 
         train_data = data['img'].cuda()
         train_labels = data['target'].cuda()
-        # print(train_data.shape, train_data.size())
+        print(train_data.shape)
+        # image_processor = AutoImageProcessor.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
+        # train_data = image_processor(train_data, return_tensors="pt")
         optimizer.zero_grad()
         y_pred = model(train_data)
-
-        # print(y_pred.shape, y_pred.size())
+        # print(y_pred)
+        y_pred = y_pred.logits
+        # if isinstance(y_pred, list):
+        #     y_pred = torch.tensor(y_pred)
 
         if args.loss == "BCE":
             loss = F.binary_cross_entropy_with_logits(y_pred, train_labels, reduction='mean')
@@ -89,13 +95,12 @@ def val(i, args, model, test_loader):
             test_labels = data['target'].cuda()
 
             y_pred = model(test_data)
+            y_pred = y_pred.logits
             test_pred.append(y_pred.cpu().detach().numpy())
             test_true.append(test_labels.cpu().numpy())   
-        
+
         test_true = np.concatenate(test_true)
         test_pred = np.concatenate(test_pred)
-
-        print(test_true, test_pred)
 
         val_auc_mean =  roc_auc_score(test_true, test_pred)
         
@@ -117,6 +122,7 @@ def val(i, args, model, test_loader):
         print ("Epoch {} testing ends, val_AUC = {:.4f}".format(i, val_auc_mean))
 
 
+
 def main():
     args = Args()
 
@@ -124,10 +130,6 @@ def main():
     if args.dataset == "chest":
         train_file = ["data/chest/train_data.json"]
         test_file = ['data/chest/test_data.json']
-        step_size = 4
-    if args.dataset == "ourdata":
-        train_file = ["data/ourdata/train.json"]
-        test_file = ['data/ourdata/test.json']
         step_size = 4
     elif args.dataset == "oai":
         train_file = ["data/oai/train_val_dataset.json"]
@@ -149,9 +151,12 @@ def main():
         print("Using DenseNet121.")
         model.classifier = torch.nn.Linear(model.classifier.in_features, args.num_classes)
     elif args.model == 'ResNet101':
-        model = models.resnet101(pretrained=True)
+        backbone = models.resnet101(pretrained=True)
         print("Using ResNet101.")
-        model.fc = torch.nn.Linear(model.fc.in_features, args.num_classes)
+        backbone.fc = torch.nn.Identity()  # Remove the final classification layer
+        # Assume MLDecoder takes only num_classes
+        ml_decoder = MLDecoder(num_classes=args.num_classes)
+        model = ModelWithMLDecoder(backbone, ml_decoder)
     elif args.model == "AlexNet":
         print("Using AlexNet.")
         model = models.alexnet(pretrained=True)
@@ -159,15 +164,21 @@ def main():
     elif args.model == "TResNet":
         print("Using TResNet.")
         model = timm.create_model('tresnet_l', pretrained=True)  # You can choose between 'tresnet_m', 'tresnet_l', 'tresnet_xl'
+        # if args.using_ml_decoder == 0:
         model.head.fc = torch.nn.Linear(model.head.fc.in_features, args.num_classes)
-    elif args.model == "ViT":
-        print("Using ViT.")
-        # Load a pretrained ViT model
-        model = timm.create_model('vit_large_patch16_224', pretrained=True) 
-        # Modify the classification head to match the number of classes
-        model.head = torch.nn.Linear(model.head.in_features, args.num_classes)
+        # else:
+        model = add_ml_decoder_head(model)
+        # model = CvtForImageClassification.from_pretrained("microsoft/cvt-13")
+
+        # # Modify the final classification layer for multi-label classification
+
+        # model.classifier = nn.Sequential(
+        #     nn.Linear(model.classifier.in_features, args.num_classes),
+        #     nn.Sigmoid()  # Apply sigmoid for multi-label classification
+        # )
 
     model.cuda()
+
     if torch.cuda.device_count() > 1:
         print("lets use {} GPUs.".format(torch.cuda.device_count()))
         model = nn.DataParallel(model, device_ids=list(range(torch.cuda.device_count())))
