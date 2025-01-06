@@ -1,8 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=oai
-#SBATCH --output=../capstone/our.out
-#SBATCH --error=../capstone/our.err
+#SBATCH --job-name=tres_sgd_bce
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -12,13 +10,13 @@
 
 # job info
 train_file=main
-model="DenseNet121" # ResNet101, DenseNet121, AlexNet, TResNet, ViT
+model="TResNet" # ResNet101, DenseNet121, AlexNet, TResNet, ViT
 dataset="ourdata" # chest, oai
 num_classes=15 # 14 for chest, 5 for oai
 
-optimizer="Adam" # Adam, SGD
+optimizer="SGD" # Adam, SGD
 batch_size=32
-loss="FOCAL" #BCE, FOCAL
+loss="BCE" #BCE, FOCAL
 learning_rate=1e-4
 momentum=0.9 # Specifically for SGD
 weight_decay=1e-5

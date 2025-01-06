@@ -125,7 +125,7 @@ def main():
         train_file = ["data/chest/train_data.json"]
         test_file = ['data/chest/test_data.json']
         step_size = 4
-    if args.dataset == "ourdata":
+    elif args.dataset == "ourdata":
         train_file = ["data/ourdata/train.json"]
         test_file = ['data/ourdata/test.json']
         step_size = 4

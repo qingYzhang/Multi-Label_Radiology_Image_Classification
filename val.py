@@ -40,6 +40,7 @@ def val(args, model, test_loader):
         for jdx, data in enumerate(test_loader):
             test_data = data['img'].cuda()
             test_labels = data['target'].cuda()
+            print(test_data.shape)
 
             y_pred = model(test_data)
             test_pred.append(y_pred.cpu().detach().numpy())
