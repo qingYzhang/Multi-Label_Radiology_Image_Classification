@@ -17,12 +17,12 @@ def view_filter(base_folder, output_folder):
     for root, _, files in os.walk(base_folder):
         # print(root)
         # folder_data = {}
-        # if i == 100:
-        #     break
+        if i == 100000:
+            break
         for file in files:
             view = ""
-            # if i == 100:
-            #     break
+            if i == 100000:
+                break
             if file.endswith('.h5'):
                 file_path = os.path.join(root, file)
                 # print(root, file)
@@ -51,9 +51,9 @@ def view_filter(base_folder, output_folder):
                 print(view, metadata.get("SeriesDescription", "").decode("utf-8").lower())
                 if view != "":
                     view_categories[view].append(file_path)
-                # i+=1
-                # if i == 100:
-                #     break
+                i+=1
+                if i == 100000:
+                    break
                 # except Exception as e:
                 #     print(f"Error processing file {file_path}: {e}")
 
@@ -106,6 +106,6 @@ def view_filter(base_folder, output_folder):
     print("Done!")
 
 
-base_folder = "../../automated_resident/report_generation/datasets/xr_knee/v1.0.0-20241204"
-output_folder = "../xr_knee_abc/classified"
+base_folder = "../../automated_resident/report_generation/datasets/xr_knee/v1.0.0-20241204/images"
+output_folder = "../xr_knee_abc/classified_100000"
 view_filter(base_folder, output_folder)
